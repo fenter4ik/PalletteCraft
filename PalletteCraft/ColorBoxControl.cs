@@ -31,7 +31,8 @@ namespace PaletteCraft.Controls
                 Text = ColorToHex(PaletteColor.Color),
                 Dock = DockStyle.Bottom,
                 TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.White,
+                BackColor = UIManager.ButtonColor,
+                ForeColor = UIManager.TextColor,
                 AutoSize = false,
                 Height = 20
             };

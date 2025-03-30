@@ -1,9 +1,10 @@
-﻿using PaletteCraft.Controls;
+﻿using PaletteCraft;
+using PaletteCraft.Controls;
 using PaletteCraft.Services;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PalletteCraft
@@ -11,18 +12,19 @@ namespace PalletteCraft
     public partial class MainForm : Form
     {
         private PaletteColor selectedColor;
-        private readonly Color accentColor = Color.FromArgb(0, 122, 204);
+        // Используем акцент из UIManager или можно задать другой
+        private readonly Color accentColor = UIManager.AccentColor;
 
         // Элементы управления
         private FlowLayoutPanel colorsPanel;
         private Panel selectedColorPanel;
         private TextBox txtHex;
-        private Button btnAddColor, btnDeleteColor, btnClearAll;
+        private Button btnAddColor, btnDeleteColor, btnClearAll, btnAddHexColor;
         private Button btnGenerateGradient, btnSavePalette, btnLoadPalette;
 
         public MainForm()
         {
-            InitializeComponent();
+            InitializeComponent(); // Если используется дизайнер, иначе можно удалить
             SetupUI();
             SetupEventHandlers();
             DoubleBuffered = true;
@@ -33,10 +35,10 @@ namespace PalletteCraft
         private void SetupUI()
         {
             Text = "🎨 Palette Craft";
-            BackColor = Color.White;
-            Font = new Font("Segoe UI", 9f);
+            UIManager.StyleForm(this);
             Padding = new Padding(20);
 
+            // Главный контейнер
             var mainLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -48,33 +50,36 @@ namespace PalletteCraft
                 }
             };
 
+            // Панель для отображения цветов
             colorsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
                 WrapContents = true,
                 Padding = new Padding(15),
-                BackColor = ColorTranslator.FromHtml("#F8F9FA")
+                BackColor = UIManager.PanelColor
             };
 
+            // Панель управления
             var controlPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
                 Padding = new Padding(20)
             };
+            UIManager.StylePanel(controlPanel);
 
             var controlLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                RowCount = 9,
+                RowCount = 10,
                 RowStyles =
                 {
                     new RowStyle(SizeType.Absolute, 180), // Selected color
                     new RowStyle(SizeType.Absolute, 20),  // Spacer
-                    new RowStyle(SizeType.Absolute, 40),  // Hex
+                    new RowStyle(SizeType.Absolute, 40),  // HEX поле
                     new RowStyle(SizeType.Absolute, 15),  // Spacer
-                    new RowStyle(SizeType.Absolute, 40),  // Buttons
+                    new RowStyle(SizeType.Absolute, 40),
+                    new RowStyle(SizeType.Absolute, 40),// Кнопки
                     new RowStyle(SizeType.Absolute, 40),
                     new RowStyle(SizeType.Absolute, 40),
                     new RowStyle(SizeType.Absolute, 40),
@@ -85,7 +90,7 @@ namespace PalletteCraft
             selectedColorPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White,
+                BackColor = UIManager.ButtonColor,
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(5)
             };
@@ -93,53 +98,33 @@ namespace PalletteCraft
             txtHex = new TextBox
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 12),
-                TextAlign = HorizontalAlignment.Center,
-                BorderStyle = BorderStyle.FixedSingle
+                TextAlign = HorizontalAlignment.Center
             };
+            UIManager.StyleTextBox(txtHex);
 
-            btnAddColor = CreateButton("Add Color", "➕");
-            btnDeleteColor = CreateButton("Delete Color", "🗑");
-            btnClearAll = CreateButton("Clear All", "❌");
-            btnGenerateGradient = CreateButton("Generate Gradient", "🌓");
-            btnSavePalette = CreateButton("Save Palette", "💾");
-            btnLoadPalette = CreateButton("Load Palette", "📂");
+            btnAddColor = UIManager.CreateStyledButton("Add Color", "➕");
+            btnAddHexColor = UIManager.CreateStyledButton("Add HEX Color", "#️");
+            btnDeleteColor = UIManager.CreateStyledButton("Delete Color", "🗑");
+            btnClearAll = UIManager.CreateStyledButton("Clear All", "❌");
+            btnGenerateGradient = UIManager.CreateStyledButton("Generate Gradient", "🌓");
+            btnSavePalette = UIManager.CreateStyledButton("Save Palette", "💾");
+            btnLoadPalette = UIManager.CreateStyledButton("Load Palette", "📂");
 
-            // Расположение элементов в панели управления
+            // Добавляем элементы в панель управления
             controlLayout.Controls.Add(selectedColorPanel, 0, 0);
             controlLayout.Controls.Add(txtHex, 0, 2);
             controlLayout.Controls.Add(btnAddColor, 0, 4);
-            controlLayout.Controls.Add(btnDeleteColor, 0, 5);
-            controlLayout.Controls.Add(btnClearAll, 0, 6);
-            controlLayout.Controls.Add(btnGenerateGradient, 0, 7);
-            controlLayout.Controls.Add(btnSavePalette, 0, 8);
-            controlLayout.Controls.Add(btnLoadPalette, 0, 9);
+            controlLayout.Controls.Add(btnAddHexColor, 0, 5);
+            controlLayout.Controls.Add(btnDeleteColor, 0, 6);
+            controlLayout.Controls.Add(btnClearAll, 0, 7);
+            controlLayout.Controls.Add(btnGenerateGradient, 0, 8);
+            controlLayout.Controls.Add(btnSavePalette, 0, 9);
+            controlLayout.Controls.Add(btnLoadPalette, 0, 10);
 
             controlPanel.Controls.Add(controlLayout);
             mainLayout.Controls.Add(colorsPanel, 0, 0);
             mainLayout.Controls.Add(controlPanel, 1, 0);
             Controls.Add(mainLayout);
-        }
-
-        private Button CreateButton(string text, string emoji)
-        {
-            var btn = new Button
-            {
-                Text = $"{emoji} {text}",
-                Height = 40,
-                Dock = DockStyle.Top,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.White,
-                ForeColor = accentColor,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Margin = new Padding(0, 0, 0, 10),
-                Cursor = Cursors.Hand
-            };
-            btn.FlatAppearance.BorderColor = Color.Gainsboro;
-            btn.FlatAppearance.BorderSize = 1;
-            btn.MouseEnter += (s, e) => btn.BackColor = ColorTranslator.FromHtml("#F8F9FA");
-            btn.MouseLeave += (s, e) => btn.BackColor = Color.White;
-            return btn;
         }
 
         private void SetupEventHandlers()
@@ -160,7 +145,7 @@ namespace PalletteCraft
                 {
                     PaletteService.DeleteColor(selectedColor);
                     selectedColor = null;
-                    selectedColorPanel.BackColor = Color.White;
+                    selectedColorPanel.BackColor = UIManager.ButtonColor;
                     txtHex.Text = "";
                     RefreshColorBoxes();
                 }
@@ -170,7 +155,7 @@ namespace PalletteCraft
             {
                 PaletteService.ClearColors();
                 selectedColor = null;
-                selectedColorPanel.BackColor = Color.White;
+                selectedColorPanel.BackColor = UIManager.ButtonColor;
                 txtHex.Text = "";
                 RefreshColorBoxes();
             };
@@ -185,6 +170,20 @@ namespace PalletteCraft
                         PaletteService.AddColor(clr);
                     }
                     RefreshColorBoxes();
+                }
+            };
+
+            btnAddHexColor.Click += (s, e) =>
+            {
+                try
+                {
+                    var color = HexToColor(txtHex.Text);
+                    PaletteService.AddColor(color);
+                    RefreshColorBoxes();
+                }
+                catch
+                {
+                    MessageBox.Show("Invalid HEX format. Use #RRGGBB or RRGGBB", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
 
@@ -274,6 +273,5 @@ namespace PalletteCraft
                 Convert.ToInt32(hex.Substring(2, 2), 16),
                 Convert.ToInt32(hex.Substring(4, 2), 16));
         }
-
     }
 }
