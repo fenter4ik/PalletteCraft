@@ -19,7 +19,7 @@ namespace PalletteCraft
         private FlowLayoutPanel colorsPanel;
         private Panel selectedColorPanel;
         private TextBox txtHex;
-        private Button btnAddColor, btnDeleteColor, btnClearAll, btnAddHexColor;
+        private Button btnAddColor, btnDeleteColor, btnClearAll, btnAddHexColor, btnUndo, btnRedo;
         private Button btnGenerateGradient, btnSavePalette, btnLoadPalette;
 
         public MainForm()
@@ -28,7 +28,7 @@ namespace PalletteCraft
             SetupUI();
             SetupEventHandlers();
             DoubleBuffered = true;
-            MinimumSize = new Size(1000, 650);
+            MinimumSize = new Size(1200, 800);
             RefreshColorBoxes();
         }
 
@@ -71,7 +71,7 @@ namespace PalletteCraft
             var controlLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                RowCount = 10,
+                RowCount = 12,
                 RowStyles =
                 {
                     new RowStyle(SizeType.Absolute, 180), // Selected color
@@ -80,6 +80,8 @@ namespace PalletteCraft
                     new RowStyle(SizeType.Absolute, 15),  // Spacer
                     new RowStyle(SizeType.Absolute, 40),
                     new RowStyle(SizeType.Absolute, 40),// Кнопки
+                    new RowStyle(SizeType.Absolute, 40),
+                    new RowStyle(SizeType.Absolute, 40),
                     new RowStyle(SizeType.Absolute, 40),
                     new RowStyle(SizeType.Absolute, 40),
                     new RowStyle(SizeType.Absolute, 40),
@@ -109,7 +111,8 @@ namespace PalletteCraft
             btnGenerateGradient = UIManager.CreateStyledButton("Generate Gradient", "🌓");
             btnSavePalette = UIManager.CreateStyledButton("Save Palette", "💾");
             btnLoadPalette = UIManager.CreateStyledButton("Load Palette", "📂");
-
+            btnUndo = UIManager.CreateStyledButton("Undo", "↩");
+            btnRedo = UIManager.CreateStyledButton("Redo", "↪");
             // Добавляем элементы в панель управления
             controlLayout.Controls.Add(selectedColorPanel, 0, 0);
             controlLayout.Controls.Add(txtHex, 0, 2);
@@ -119,7 +122,9 @@ namespace PalletteCraft
             controlLayout.Controls.Add(btnClearAll, 0, 7);
             controlLayout.Controls.Add(btnGenerateGradient, 0, 8);
             controlLayout.Controls.Add(btnSavePalette, 0, 9);
-            controlLayout.Controls.Add(btnLoadPalette, 0, 10);
+            controlLayout.Controls.Add(btnUndo, 0, 10);
+            controlLayout.Controls.Add(btnRedo, 0, 11);
+            controlLayout.Controls.Add(btnLoadPalette, 0, 12);
 
             controlPanel.Controls.Add(controlLayout);
             mainLayout.Controls.Add(colorsPanel, 0, 0);
@@ -138,7 +143,8 @@ namespace PalletteCraft
                     RefreshColorBoxes();
                 }
             };
-
+            btnUndo.Click += (s, e) => { PaletteService.Undo(); RefreshColorBoxes(); };
+            btnRedo.Click += (s, e) => { PaletteService.Redo(); RefreshColorBoxes(); };
             btnDeleteColor.Click += (s, e) =>
             {
                 if (selectedColor != null)

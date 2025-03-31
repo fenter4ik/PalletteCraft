@@ -36,17 +36,18 @@ namespace PalletteCraft
             return colors;
         }
 
-        public static void Save(string path, IEnumerable<PaletteColor> colors, string name = "Custom Palette")
+        // В PaletteFile.cs
+        public static void Save(string path, IEnumerable<ColorGroup> groups)
         {
             using var writer = new StreamWriter(path);
-            writer.WriteLine("GIMP Palette");
-            writer.WriteLine($"Name: {name}");
-            writer.WriteLine($"# Generated {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            writer.WriteLine("#");
-
-            foreach (var color in colors)
+            writer.WriteLine("PaletteCraft v2");
+            foreach (var group in groups)
             {
-                writer.WriteLine($"{color.Color.R,-3} {color.Color.G,-3} {color.Color.B,-3}\t{color.Name}");
+                writer.WriteLine($"#GROUP {group.Name}");
+                foreach (var color in group.Colors)
+                {
+                    writer.WriteLine($"{color.Color.R} {color.Color.G} {color.Color.B} {color.Name}");
+                }
             }
         }
     }
