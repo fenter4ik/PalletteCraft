@@ -35,6 +35,7 @@ namespace PalletteCraft
             SetupEventHandlers();
             DoubleBuffered = true;
             MinimumSize = new Size(1400, 800);
+
             // При старте обновляем отображение палитры с группами
             RefreshPaletteDisplay();
             // При изменении размера окна обновляем отображение, чтобы группы корректно занимали строку
@@ -54,12 +55,13 @@ namespace PalletteCraft
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                ColumnStyles =
-                {
-                    new ColumnStyle(SizeType.Percent, 80),
-                    new ColumnStyle(SizeType.Percent, 20)
-                }
+                RowCount = 1
             };
+
+            // Устанавливаем процентное распределение по ширине
+            // 75% под панель с цветами, 25% под панель управления
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75f));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
 
             // Панель для отображения палитры (группы и неотнесённые цвета)
             colorsPanel = new FlowLayoutPanel
@@ -75,28 +77,26 @@ namespace PalletteCraft
             var controlPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(20)
+                Padding = new Padding(10) // чуть меньше, чтобы визуально растягивалось
             };
             UIManager.StylePanel(controlPanel);
 
+            // Используем TableLayoutPanel для адаптивного расположения внутри панели управления
             var controlLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 RowCount = 10,
-                RowStyles =
-                {
-                    new RowStyle(SizeType.Absolute, 180), // Панель выбранного цвета
-                    new RowStyle(SizeType.Absolute, 40),  // Поле HEX
-                    new RowStyle(SizeType.Absolute, 40),  // Add Color
-                    new RowStyle(SizeType.Absolute, 40),  // Add HEX Color
-                    new RowStyle(SizeType.Absolute, 40),  // Delete Color
-                    new RowStyle(SizeType.Absolute, 40),  // Clear All
-                    new RowStyle(SizeType.Absolute, 40),  // Generate Gradient
-                    new RowStyle(SizeType.Absolute, 40),  // Save Palette
-                    new RowStyle(SizeType.Absolute, 40),  // Undo/Redo
-                    new RowStyle(SizeType.Percent, 100)
-                }
+                ColumnCount = 1
             };
+
+            // Задаём процентное распределение высоты:
+            //  - 1-я строка (выбранный цвет) — 20% высоты
+            //  - остальные 9 строк — оставшиеся 80% поровну (по ~8.888% каждая)
+            controlLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 20f)); // row 0
+            for (int i = 1; i < 10; i++)
+            {
+                controlLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 80f / 9f));
+            }
 
             selectedColorPanel = new Panel
             {
@@ -123,6 +123,20 @@ namespace PalletteCraft
             btnUndo = UIManager.CreateStyledButton("Undo", "↩");
             btnRedo = UIManager.CreateStyledButton("Redo", "↪");
 
+            // Все элементы растягиваются по ячейкам
+            selectedColorPanel.Dock = DockStyle.Fill;
+            txtHex.Dock = DockStyle.Fill;
+            btnAddColor.Dock = DockStyle.Fill;
+            btnAddHexColor.Dock = DockStyle.Fill;
+            btnDeleteColor.Dock = DockStyle.Fill;
+            btnClearAll.Dock = DockStyle.Fill;
+            btnGenerateGradient.Dock = DockStyle.Fill;
+            btnSavePalette.Dock = DockStyle.Fill;
+            btnLoadPalette.Dock = DockStyle.Fill;
+            btnUndo.Dock = DockStyle.Fill;
+            btnRedo.Dock = DockStyle.Fill;
+
+            // Добавляем элементы в controlLayout
             controlLayout.Controls.Add(selectedColorPanel, 0, 0);
             controlLayout.Controls.Add(txtHex, 0, 1);
             controlLayout.Controls.Add(btnAddColor, 0, 2);
@@ -132,20 +146,26 @@ namespace PalletteCraft
             controlLayout.Controls.Add(btnGenerateGradient, 0, 6);
             controlLayout.Controls.Add(btnSavePalette, 0, 7);
 
-            // Панель для Undo/Redo
+            // Создаём панель для Undo/Redo с равномерным распределением по ширине
             var undoRedoPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                ColumnStyles ={new ColumnStyle(SizeType.Percent, 50), new ColumnStyle(SizeType.Percent, 50) }
+                RowCount = 1
             };
-            undoRedoPanel.Controls.Add(btnUndo);
-            undoRedoPanel.Controls.Add(btnRedo);
+            undoRedoPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            undoRedoPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+
+            undoRedoPanel.Controls.Add(btnUndo, 0, 0);
+            undoRedoPanel.Controls.Add(btnRedo, 1, 0);
+
             controlLayout.Controls.Add(undoRedoPanel, 0, 8);
             controlLayout.Controls.Add(btnLoadPalette, 0, 9);
-            btnUndo.Dock = DockStyle.Fill;
-            btnRedo.Dock = DockStyle.Fill;
+
+            // Добавляем controlLayout в controlPanel
             controlPanel.Controls.Add(controlLayout);
+
+            // Добавляем в главный layout
             mainLayout.Controls.Add(colorsPanel, 0, 0);
             mainLayout.Controls.Add(controlPanel, 1, 0);
             Controls.Add(mainLayout);
@@ -277,7 +297,7 @@ namespace PalletteCraft
             // Вывод групп
             foreach (var group in groups.ToList()) // ToList для безопасной итерации
             {
-                // Панель группы с рамкой и отступами
+                // Панель группы
                 var groupPanel = new Panel
                 {
                     AutoSize = true,
@@ -288,7 +308,7 @@ namespace PalletteCraft
                 // Ограничиваем максимальную ширину, чтобы группа занимала одну строку
                 groupPanel.MaximumSize = new Size(colorsPanel.ClientSize.Width, 0);
 
-                // Заголовок группы – панель с редактируемым названием и кнопкой удаления
+                // Заголовок группы
                 var headerPanel = new FlowLayoutPanel
                 {
                     Dock = DockStyle.Top,
@@ -312,7 +332,6 @@ namespace PalletteCraft
                     AutoSize = true
                 };
 
-                // Кнопка удаления группы – при удалении группы её цвета становятся неотнесёнными
                 var btnDeleteGroup = new Button
                 {
                     Text = "X",
@@ -338,7 +357,6 @@ namespace PalletteCraft
                     txtGroupName.Visible = true;
                     txtGroupName.Focus();
                 };
-
                 txtGroupName.KeyDown += (s, e) =>
                 {
                     if (e.KeyCode == Keys.Enter)
@@ -363,7 +381,7 @@ namespace PalletteCraft
                 headerPanel.Controls.Add(btnDeleteGroup);
                 groupPanel.Controls.Add(headerPanel);
 
-                // Панель для цветов внутри группы – цвета располагаются в строку с переносом
+                // Панель для цветов внутри группы
                 var groupColorsPanel = new FlowLayoutPanel
                 {
                     Dock = DockStyle.Fill,
@@ -372,13 +390,15 @@ namespace PalletteCraft
                     WrapContents = true,
                     BackColor = UIManager.ButtonColor,
                     Padding = new Padding(5),
-                    // Ограничиваем ширину панели так, чтобы в одной строке было максимум 9 блоков
-                    MaximumSize = new Size(MaxColumns * ColorBoxWidth, 0)
+
+                    // Ключевое изменение: добавляем отступ сверху, чтобы отделить от заголовка
+                    Margin = new Padding(0, 70, 0, 0)
                 };
 
-                // Если группа пуста, устанавливаем минимальный размер для удобства перетаскивания
-                if (!group.Colors.Any())
-                    groupColorsPanel.MinimumSize = new Size(ColorBoxWidth, ColorBoxWidth);
+                // Ограничиваем ширину панели так, чтобы в одной строке было максимум 9 блоков
+                groupColorsPanel.MaximumSize = new Size(MaxColumns * ColorBoxWidth, 0);
+                // Задаём минимальную ширину (на 9 блоков), чтобы всегда было место для drop
+                groupColorsPanel.MinimumSize = new Size(MaxColumns * ColorBoxWidth, ColorBoxWidth);
 
                 // Разрешаем drag & drop в группу
                 groupColorsPanel.AllowDrop = true;
@@ -416,7 +436,7 @@ namespace PalletteCraft
                 colorsPanel.Controls.Add(groupPanel);
             }
 
-            // Вывод неотнесённых цветов – ограничиваем ширину панели так, чтобы в строке было не более 9 блоков
+            // Вывод неотнесённых цветов
             var ungroupedColors = PaletteService.Colors.Except(groups.SelectMany(g => g.Colors)).ToList();
             if (ungroupedColors.Any())
             {
@@ -448,10 +468,14 @@ namespace PalletteCraft
                     WrapContents = true,
                     BackColor = UIManager.ButtonColor,
                     Padding = new Padding(5),
-                    MaximumSize = new Size(MaxColumns * ColorBoxWidth, 0)
-                };
 
-                // Добавляем drop-обработку для возврата цвета из групп
+                    // Аналогично делаем отступ сверху
+                    Margin = new Padding(0, 10, 0, 0)
+                };
+                ungroupedColorsPanel.MaximumSize = new Size(MaxColumns * ColorBoxWidth, 0);
+                ungroupedColorsPanel.MinimumSize = new Size(MaxColumns * ColorBoxWidth, ColorBoxWidth);
+
+                // Разрешаем drag & drop
                 ungroupedColorsPanel.AllowDrop = true;
                 ungroupedColorsPanel.DragEnter += (s, e) =>
                 {
@@ -473,6 +497,7 @@ namespace PalletteCraft
                     }
                 };
 
+                // Добавляем блоки неотнесённых цветов
                 foreach (var color in ungroupedColors)
                 {
                     var box = new ColorBoxControl(color);
@@ -488,6 +513,7 @@ namespace PalletteCraft
                 colorsPanel.Controls.Add(ungroupedPanel);
             }
         }
+
 
         private void SelectColor(PaletteColor palColor)
         {
